@@ -1,6 +1,6 @@
 # Near Loans Core Contract
 
-The smart contract is designed for the NEAR network. It exposes the core contract methods of nearloans, interface accessible at nearloans.finance
+The smart contract is designed for the NEAR network. It exposes the core contract methods of nearloans, interface accessible at [nearloans.finance](https://nearloans.finance)
 
 ## Interface
 
