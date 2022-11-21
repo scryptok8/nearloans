@@ -1,4 +1,4 @@
-# NEAR MetaBUILD III Hackathon
+# NEARLOANS - NEAR MetaBUILD III Hackathon
 
 ## Inspiration
 
