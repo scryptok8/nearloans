@@ -53,7 +53,7 @@ class EscrowContract {
   }
 }
 
-function promiseResult(): {result: string, success: boolean}{
+function promiseResult(): {result: string, success: boolean} {
   let result, success;
   
   try { result = near.promiseResult(0); success = true }

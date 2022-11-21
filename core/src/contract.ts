@@ -212,28 +212,28 @@ class LoanContract {
    */
 
   @call({})
-  set_greeting({ message }: { message: string }): boolean {
+  set_greeting({ message }: { message: string }): any {
     this.message = message
 
     return true
   }
 
   @call({})
-  set_escrow({ escrow }: { escrow: string}): boolean {
+  set_escrow({ escrow }: { escrow: string}): any {
     this.escrow = escrow
 
     return true
   }
 
   @call({})
-  add_supported_token({ token, account }: { token: string, account: string }): boolean {
+  add_supported_token({ token, account }: { token: string, account: string }): any {
     this.supportedTokens.set(token, account)
     near.log(`support added for token ${token}`)
     return true
   }
 
   @call({})
-  remove_supported_token({ token }: { token: string }): boolean {
+  remove_supported_token({ token }: { token: string }): any {
     this.supportedTokens.remove(token)
     near.log(`support removed for token ${token}`)
     return true
@@ -348,7 +348,7 @@ class LoanContract {
   }
 
   @call({ privateFunction: true })
-  create_loan({ mode, type, borrower, lender, guarantor, currency, capital, rate, frequency, duration, title, description, link }: { mode: string, type: string, borrower: string, lender: string, guarantor: string, currency: string, capital: bigint, rate: number, frequency: number, duration: number, expiration: number, title: string, description: string, link: string }): boolean {
+  create_loan({ mode, type, borrower, lender, guarantor, currency, capital, rate, frequency, duration, title, description, link }: { mode: string, type: string, borrower: string, lender: string, guarantor: string, currency: string, capital: bigint, rate: number, frequency: number, duration: number, expiration: number, title: string, description: string, link: string }): any {
     const timestamp = near.blockTimestamp()
     const expirationTimestamp = timestamp + BigInt(7) * BigInt(DAY_NANO_MS)
     const createdAt = timestamp.toString()
@@ -416,7 +416,7 @@ class LoanContract {
   }
 
   @call({ privateFunction: true })
-  accept_loan({ id, lender }: { id: string, lender: string }): boolean {
+  accept_loan({ id, lender }: { id: string, lender: string }): any {
     const timestamp = near.blockTimestamp().toString()
     const loan = this.loans.get(id)
 
@@ -447,7 +447,7 @@ class LoanContract {
   }
 
   @call({ privateFunction: true })
-  increase_loan_deposit({ id, amount }: { id: string, amount: string }): boolean {
+  increase_loan_deposit({ id, amount }: { id: string, amount: string }): any {
     const loan = this.loans.get(id)
 
     assert(loan, "loan not exists")
@@ -465,7 +465,7 @@ class LoanContract {
   }
 
   @call({})
-  cancel_loan({id}: { id: string }): boolean {
+  cancel_loan({id}: { id: string }): any {
     const loan = this.loans.get(id)
 
     assert(loan, "loan not exists")
@@ -508,7 +508,7 @@ class LoanContract {
 
     return true
   }
-  
+
   @call({payableFunction: true})
   collect_loan_interest({ id }: { id: string }): any {
     const loan = this.loans.get(id)
@@ -553,7 +553,7 @@ class LoanContract {
   }
 
   @call({privateFunction: true})
-  callback_default({ success }: { success: boolean }): string {
+  callback_default({ success }: { success: boolean }): any {
     let { result, success: promiseSuccess } = promiseResult()
     near.log(`promise result : ${result}`)
 
