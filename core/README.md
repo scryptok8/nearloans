@@ -4,7 +4,7 @@ The smart contract is designed for the NEAR network. It exposes the core contrac
 
 ## Interface
 
-### NearLoans Core Smart Contract - Direct Calls
+### NearLoans Core Contract - Direct Calls
 
 #### Get loans
 near view NEARLOANS_CORE_ACCOUNT get_loans
