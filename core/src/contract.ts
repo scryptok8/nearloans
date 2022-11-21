@@ -252,11 +252,7 @@ class LoanContract {
       case "create_loan":
         loan = Object.assign({ borrower: sender_id }, params, { guarantor: sender_id, mode: "BORROW", type: "AMORTIZED" })
 
-        if ( amount != loan.capital ) {
-          // if collateral amount is not equal to loan capital refund and return
-          return NearPromise.new(near.currentAccountId())
-          .functionCall("callback_ft_on_transfer", bytes(JSON.stringify({ amount, success: false })), NO_DEPOSIT, FIFTY_TGAS)
-        }
+        assert(amount == loan.capital, "amount must be equal to loan capital" ) 
 
         return NearPromise.new(near.predecessorAccountId())
         .functionCall("ft_transfer", bytes(JSON.stringify({ receiver_id: this.escrow, amount: amount, memo: msg })), ONE_YOCTO, FIFTY_TGAS)
@@ -266,7 +262,7 @@ class LoanContract {
         )
         .then(
           NearPromise.new(near.currentAccountId())
-          .functionCall("callback_ft_on_transfer", bytes(JSON.stringify({ amount, success: true })), NO_DEPOSIT, FIFTY_TGAS)
+          .functionCall("callback_ft_on_transfer", bytes(JSON.stringify({ amount, success: true, id: loan["id"] })), NO_DEPOSIT, FIFTY_TGAS)
         )
         .asReturn()
 
@@ -276,14 +272,14 @@ class LoanContract {
         loan = this.get_loan({ id: params["id"] })
 
         assert(loan, "loan not exists")
+        assert(!loan["locked"], "loan is locked, please retry later")
         assert(loan["status"] == "PENDING", "only pending loans can be accepted")
+        assert(amount == loan.capital, "amount must be equal to loan capital")
 
-        if ( amount != loan.capital ) {
-          // if amount is not equal to loan capital refund and return
-          return NearPromise.new(near.currentAccountId())
-          .functionCall("callback_ft_on_transfer", bytes(JSON.stringify({ amount, success: false })), NO_DEPOSIT, FIFTY_TGAS)      
-        }
-
+        // lock the loan. unlock it later.
+        loan["locked"] = true 
+        this.loans.set(loan["id"], loan)
+        
         borrower = loan["borrower"]
 
         return NearPromise.new(near.predecessorAccountId())
@@ -294,7 +290,7 @@ class LoanContract {
         )
         .then(
           NearPromise.new(near.currentAccountId())
-          .functionCall("callback_ft_on_transfer", bytes(JSON.stringify({ amount, success: true })), NO_DEPOSIT, FIFTY_TGAS)          
+          .functionCall("callback_ft_on_transfer", bytes(JSON.stringify({ amount, success: true, id: loan["id"] })), NO_DEPOSIT, FIFTY_TGAS)          
         )
         .asReturn()
 
@@ -303,11 +299,12 @@ class LoanContract {
 
         loan = this.get_loan({ id: params["id"] })
 
-        if ( !loan ) {
-          // if amount not exists refund and return
-          return NearPromise.new(near.currentAccountId())
-          .functionCall("callback_ft_on_transfer", bytes(JSON.stringify({ amount, success: false })), NO_DEPOSIT, FIFTY_TGAS)      
-        }
+        assert(loan, "loan not exists")
+        assert(!loan["locked"], "loan is locked, please retry later")
+
+        // lock the loan. unlock it later.
+        loan["locked"] = true 
+        this.loans.set(loan["id"], loan)
 
         const deposit = loan["deposit"] ? parseInt(loan["deposit"]) : 0
         const newDeposit = deposit + parseInt(amount)
@@ -325,16 +322,21 @@ class LoanContract {
         )
         .then(
           NearPromise.new(near.currentAccountId())
-          .functionCall("callback_ft_on_transfer", bytes(JSON.stringify({ amount, success: true })), NO_DEPOSIT, FIFTY_TGAS)          
+          .functionCall("callback_ft_on_transfer", bytes(JSON.stringify({ amount, success: true, id: loan["id"] })), NO_DEPOSIT, FIFTY_TGAS)          
         )
         .asReturn()
     }
   }
 
   @call({privateFunction: true})
-  callback_ft_on_transfer({ amount, success }:{ amount: string, success: boolean }): any {
+  callback_ft_on_transfer({ amount, success, id }:{ amount: string, success: boolean, id: string }): any {
     // always called as a last callback to return the amount of unused tokens to calling ft_transfer_call method of ft contract 
     let { success: promiseSuccess } = promiseResult()
+
+    // unlock the loan.
+    const loan = this.get_loan({ id })
+    loan["locked"] = false 
+    this.loans.set(loan["id"], loan)
 
     if (promiseSuccess && success) {
       near.log(`ft transfer succeeded !`)
@@ -372,7 +374,8 @@ class LoanContract {
       "link": link,
       "borrower": borrower,
       "lender": lender,
-      "guarantor": guarantor
+      "guarantor": guarantor,
+      "locked": true
     }
 
     switch(mode) {
@@ -449,9 +452,6 @@ class LoanContract {
   @call({ privateFunction: true })
   increase_loan_deposit({ id, amount }: { id: string, amount: string }): any {
     const loan = this.loans.get(id)
-
-    assert(loan, "loan not exists")
-
     const deposit = loan["deposit"] ? parseInt(loan["deposit"]) : 0
     const newDeposit = deposit + parseInt(amount)
 
@@ -469,9 +469,14 @@ class LoanContract {
     const loan = this.loans.get(id)
 
     assert(loan, "loan not exists")
+    assert(!loan["locked"], "loan is locked, please try again later")
     assert(near.predecessorAccountId() == loan["borrower"] || near.predecessorAccountId() == loan["lender"], "only loan creator can cancel a loan")
     assert(loan["status"] == "PENDING", "only a pending loans can be canceled")
 
+    // lock the loan. unlock it later.
+    loan["locked"] = true 
+    this.loans.set(loan["id"], loan)
+        
     const capital = loan["capital"]
     const currency = loan["currency"]
     const borrower = loan["borrower"]
@@ -491,9 +496,14 @@ class LoanContract {
   callback_cancel_loan({ id }:{ id: string }): any { 
     let { success } = promiseResult()
 
+    const loan = this.get_loan({ id })
+
+    // unlock the loan.
+    loan["locked"] = false 
+    this.loans.set(loan["id"], loan)
+
     assert(success, "loan cancellation failed...")
 
-    const loan = this.get_loan({ id })
     const borrower = loan["borrower"]
     const borrowerLoans = [];
     const borrowerLoansIds = this.borrowersLoans.get(borrower)
@@ -513,9 +523,11 @@ class LoanContract {
   collect_loan_interest({ id }: { id: string }): any {
     const loan = this.loans.get(id)
 
+    assert(loan, "loan not exists")
+    assert(!loan["locked"], "loan is locked, please try again later")
     assert(near.predecessorAccountId() == loan["lender"], "only loan lender can collect loan interests")
 
-    const loanInterest = this.get_loan_interest({ id })    
+    const loanInterest = this.get_loan_interest({ id })
     const collectable = loanInterest["collectable"]
 
     assert(collectable && parseInt(collectable) > 0, "no interest to collect")
@@ -524,6 +536,10 @@ class LoanContract {
     const lender = loan["lender"]
     const ft = this.supportedTokens.get(currency) as string
     
+    // lock the loan. unlock later.
+    loan["locked"] = true 
+    this.loans.set(loan["id"], loan)
+
     return NearPromise.new(this.escrow.toString())
     .functionCall("call_ft_transfer", bytes(JSON.stringify({ ft, to: lender, amount: collectable })), ONE_YOCTO, TWO_HUNDREDS_TGAS)
     .then(
@@ -536,10 +552,15 @@ class LoanContract {
   @call({ privateFunction: true })
   callback_collect_loan_interest({ id, amount }:{ id: string, amount: string }): any {
     let { success } = promiseResult()
+    
+    const loan = this.get_loan({ id })
+
+    // unlock the loan.
+    loan["locked"] = false 
+    this.loans.set(loan["id"], loan)
 
     assert(success, "interest collection failed...")
 
-    const loan = this.get_loan({ id })
     const collected = loan["collected"] ? loan["collected"] : "0"
     const newCollected = parseInt(collected) + parseInt(amount)
     
