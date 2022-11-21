@@ -19,5 +19,5 @@ Implement and publish a functional loans marketplace during the hackathon's time
 More knowledge around NEAR ecosystem and development process.
 
 ## What's next for Nearloans
-Integrate support for more fungible tokens ( currently 10 were picked up for this first version )
+Integrate support for popular NEP-141 fungible tokens
 Deploy a new NEP-141 fungible token ( NLT ) to provide new features and benefits on the platform for its holders. 
