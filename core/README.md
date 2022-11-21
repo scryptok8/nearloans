@@ -4,7 +4,7 @@ The smart contract is designed for the NEAR network. It exposes the core contrac
 
 ## Interface
 
-### NearLoans Smart Contract - Direct Calls
+### NearLoans Core Smart Contract - Direct Calls
 
 #### Get loans
 near view NEARLOANS_CORE_ACCOUNT get_loans
@@ -21,7 +21,7 @@ near call NEARLOANS_CORE_ACCOUNT collect_loan_interest '{"id":"LOAN_ID"}' --acco
 #### Cancel loan 
 near call NEARLOANS_CORE_ACCOUNT cancel_loan '{"id":"LOAN_ID"}' --accountId ACCOUNT_ID --gas 300000000000000
 
-### FT Smart Contract - Transfer Calls
+### FT NEP-141 Smart Contract - Transfer Calls
 
 #### Create new loan ( as borrower )
 near call FT_ACCOUNT ft_transfer_call '{"receiver_id":"NEARLOANS_CORE_ACCOUNT", "amount":"1000", "msg":"{ \"operation\":\"create_loan\", \"params\": { \"currency\": \"NEAR\", \"capital\":\"1000\", \"rate\":\"0.01\", \"mode\":\"BORROW\", \"duration\":\"360\" } }"}' --accountId ACCOUNT_ID --depositYocto 1 --gas 300000000000000
