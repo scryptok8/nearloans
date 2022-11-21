@@ -3,7 +3,7 @@ The smart contract is designed for the NEAR network. It is an independent escrow
 
 ## Interface
 
-### NearLoan Escrow - Direct Calls
+### NearLoans Escrow Contract - Direct Calls
 
 #### Call ft transfer
 near call NEARLOANS_ESCROW_ACCOUNT call_ft_transfer '{\"ft\": \"FT_ACCOUNT\", \"to\": \"ACCOUNT_ID\", \"amount\": \"AMOUNT\"}' --accountId NEARLOANS_CORE_ACCOUNT
